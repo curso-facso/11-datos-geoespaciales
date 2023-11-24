@@ -3,7 +3,7 @@
     "path": "~/respaldo/curso_social_sciences/clases/11-datos-geoespaciales/.gitignore",
     "project_path": ".gitignore",
     "type": "gitignore",
-    "hash": "0",
+    "hash": "3281878971",
     "contents": "",
     "dirty": false,
     "created": 1700838730321.0,
@@ -12,15 +12,15 @@
     "properties": {
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "2,10",
+        "cursorPosition": "3,11",
         "scrollLine": "0"
     },
     "folds": "",
-    "lastKnownWriteTime": 1700838918,
+    "lastKnownWriteTime": 1700839404,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1700838918867,
+    "last_content_update": 1700839404421,
     "read_only": false,
     "read_only_alternatives": []
 }
