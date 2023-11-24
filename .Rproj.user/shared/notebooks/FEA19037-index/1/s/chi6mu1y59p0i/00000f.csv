@@ -1,0 +1,8 @@
+"0","paleta <- c(""#DCA761"", ""#CFB567"", ""#BFBC71"", ""#9EA887"", ""#819897"")"
+"0",""
+"0","ggplot(metropolitana) + "
+"0","  geom_sf(aes(fill = pob_adulto_mayor, geometry = geometry)) +"
+"0","  scale_fill_gradientn(colours = rev(paleta), name = ""Poblacion\nadulto mayor"") +"
+"0","  labs(title = ""Población de 65 años y más en Región Metropolitana"") +"
+"0","  theme_minimal(base_size = 13)"
+"0",""

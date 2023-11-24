@@ -1,0 +1,13 @@
+"0","library(chilemapas)"
+"2","La documentacion del paquete y ejemplos de uso se encuentran en https://pacha.dev/chilemapas/.
+Visita https://buymeacoffee.com/pacha/ si deseas donar para contribuir al desarrollo de este software.
+"
+"0","library(tidyverse)"
+"0","library(ggplot2)"
+"0",""
+"0","# Contar adultos mayores a nivel comunal "
+"0","adulto_mayor_comunas <- censo_2017_comunas %>% "
+"0","  filter(edad %in% c(""65 a 69"", ""70 a 74"", ""75 a 79"", ""80 a 84"", ""85 a 89"", ""90 a 94"", ""95 a 99"", ""100 o mas"") ) %>% "
+"0","  group_by(codigo_comuna) %>% "
+"0","  summarise(pob_adulto_mayor = sum(poblacion))"
+"0",""

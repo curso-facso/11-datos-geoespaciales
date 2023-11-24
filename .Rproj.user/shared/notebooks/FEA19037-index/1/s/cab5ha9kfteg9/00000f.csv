@@ -1,0 +1,12 @@
+"0","colegios <-  read_csv2(""data/20230912_Directorio_Oficial_EE_2023_20230430_WEB.csv"")
+"
+"2","[36mℹ[39m Using [34m[34m""','""[34m[39m as decimal and [34m[34m""'.'""[34m[39m as grouping mark. Use `read_delim()` for more control.
+"
+"2","[1mRows: [22m[34m16659[39m [1mColumns: [22m[34m50[39m"
+"2","[36m──[39m [1mColumn specification[22m [36m───────────────────────────────────────────────────────────────────────────────────────────────[39m
+[1mDelimiter:[22m "";""
+[31mchr[39m  (7): NOM_RBD, NOM_REG_RBD_A, NOM_COM_RBD, NOM_DEPROV_RBD, ORI_OTRO_GLOSA, PAGO_MATRICULA, PAGO_MENSUAL
+[32mdbl[39m (43): AGNO, RBD, DGV_RBD, MRUN, RUT_SOSTENEDOR, P_JURIDICA, COD_REG_RBD, COD_PRO_RBD, COD_COM_RBD, COD_DEPROV_R..."
+"2","
+[36mℹ[39m Use `spec()` to retrieve the full column specification for this data.
+[36mℹ[39m Specify the column types or set `show_col_types = FALSE` to quiet this message."

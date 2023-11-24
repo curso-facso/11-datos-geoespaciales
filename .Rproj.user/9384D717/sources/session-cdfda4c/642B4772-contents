@@ -1,0 +1,140 @@
+
+
+
+import geopandas as gpd
+import pandas as pd
+from samgeo import  tms_to_geotiff
+from fiona.drvsupport import supported_drivers
+import leafmap
+import os
+import re
+from zipfile import ZipFile
+
+################
+# CARGAR DATOS #
+################
+
+
+
+# Abrir archivo con polígonos de la RM
+poligonos =  "data/encuestas/kml/KMZ_UPMs_Gran_Santiago.kmz"
+supported_drivers['KML'] = 'rw'
+kmz = ZipFile(poligonos, 'r')
+kmz.extract('doc.kml', "tempDir")
+
+poligonos = gpd.read_file(os.path.join("tempDir",'doc.kml'))
+
+
+# Recibe un html y rescata un elemento específico
+def get_psu(html):
+    # La información que nos interesa está en el segundo elemento de la lista
+    parsed_html = pd.read_html(html)[1]
+    # El id de la PSU siempre está en la primera fila de la segunda columna
+    id_psu = parsed_html.iloc[:, 1][0]
+    return id_psu
+
+
+# Extraer el id de la psu a partir de un html que hay para cada registro
+poligonos["id_psu"] = [get_psu(html ) for html in poligonos.Description]
+
+# Cargar las PSU de casen 2022
+psu_labels = pd.read_feather("data/encuestas/casen_2022/casen_compacta.feather")
+psu_labels ["id_upm"] = psu_labels["id_upm"].astype(int).astype(str)
+
+# Dejar solo los polígonos que nos interesan, es decir, aquellos que están en la tabla de la casen
+df = poligonos.merge(psu_labels[["id_upm", "region", "area"]], how = "right", left_on= "id_psu",  right_on= "id_upm")
+
+
+# Hay algunos registros de la CASEN que no son parte del Gran Santiago y por eso no están en el archivo que le pedimos a Raúl
+no_match = df[df["id_psu"].isnull()]
+no_match  = no_match[["id_upm", "region", "area"]]
+no_match.to_csv("data/encuestas/casen_2022/no_match.csv")
+
+
+# Sacamos los registros que no hacen match
+df  = df[~df.id_psu.isnull()]
+
+########################
+# CREAR BOUNDING BOXES #
+########################
+centroid = df["geometry"] .centroid
+gdf = pd.concat([df, df.bounds], axis=1)
+
+# Guardar listado de polígonos
+gdf.to_csv("data/encuestas/casen_2022/poligonos_casen_2022.csv")
+
+
+
+######################
+# DESCARGAR IMÁGENES #
+######################
+
+# Identificar lo que ya se descargó, para no descargarlo de nuevo
+files = os.listdir("data/leaflet_python")
+files = [ re.findall(r'\d+', file)[0]  for file in files]
+
+for index, row in gdf.iterrows():
+    if row["id_psu"] not in files:    
+        bbox  = [row['minx'], row['miny'], row["maxx"], row["maxy"] ]
+        image = "data/leaflet_python/{psu_id}.tif".format(psu_id = row["id_psu"]) 
+        print("PSU actual: ", row["id_psu"])
+        with open('id_upm.txt', 'w') as f:
+            f.write(row["id_psu"])   
+        # SOn UPMs muy grandes. 
+        if row["id_psu"] not in ["1311910357", "1311210244", "1320110697", "1312510001"]:
+            tms_to_geotiff(output=image, bbox=bbox, zoom=19, source="Satellite", overwrite=True)
+
+
+# =============================================================================
+# z = gdf [gdf["Name"] == "1320110697"].index
+# 
+# n = 5
+# bbox  = [list(gdf['minx'])[n ], list(gdf['miny'])[n ], list(gdf["maxx"])[n ] , list(gdf["maxy"])[n ]  ]
+# image = "data/{psu_id}.tif".format(psu_id = "1311910357") 
+# tms_to_geotiff(output=image, bbox=bbox, zoom=20, source="Satellite", overwrite=True)
+# 
+# 
+# 
+# 
+# m = leafmap.Map()
+# m.add_gdf(gdf, layer_name="New York boroughs", fill_colors=["red", "green", "blue"])
+# m
+# 
+# 
+# m = leafmap.Map(center=[-33.536984,-70.661388], zoom=20, height="800px")
+# m.add_basemap("SATELLITE")
+# 
+# 
+# m = leafmap.Map()
+# m.add_basemap("HYBRID")
+# m
+# m.to_html("mymap.html")
+# 
+# gdf[gdf["Name"] == "1311210244" ].to_file("test_geo.json", driver="GeoJSON")  
+# in_geojson = "test_geo.json"
+# 
+# import leafmap.foliumap as leafmap
+# m = leafmap.Map(center=[centroid[84].y, centroid[84].x], zoom=20)
+# m.add_basemap("SATELLITE")
+# m.add_geojson(in_geojson)
+# m.to_html("mymap.html")
+# 
+# 
+# 
+# 
+# from ipyleaflet import Map, Polygon
+# 
+# polygon = Polygon(
+#     locations=[[(38.844185,-4.804621),(39.241299,-1.899833),(40.74308,-2.205491),(40.34742,-5.17429),(38.844185,-4.804621)]],
+#     color="green",
+#     fill_opacity= 0.5,
+#     fill_color="green"
+# )
+# 
+# m = leafmap.Map(center=(38.5531, -4.6914), zoom=6)
+# m.add_layer(polygon)
+# 
+# m.to_html("mymap.html")
+# 
+# 
+# =============================================================================

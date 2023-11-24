@@ -1,0 +1,423 @@
+---
+title: "Métodos computacionales para las ciencias sociales"
+subtitle: "Procesamiento de texto IV"
+format: 
+    revealjs:
+      auto-stretch: false
+      scrollable: true
+      link-external-newwindow: true
+css: style.css
+editor: source
+execute:
+  echo: false
+---
+
+```{r, echo=FALSE}
+library(kableExtra)
+library(tidyverse)
+```
+
+## Temas
+
+Tópicos sobre análisis de texto
+
+-   Diversidad léxica
+-   *Keyness*
+-   *Wordfish*
+
+## Diversidad léxica
+
+**Propuesta de investigación**
+
+Nos interesa conocer la producción de textos de alumnos de tercero básico
+
+. . .
+
+Un indicador posible (entre otros) es la riqueza léxica
+
+. . .
+
+**Supuesto**: la riqueza léxica está asociada las habilidades de expresión escrita
+
+. . .
+
+**Podemos estudiar cuántas palabras diferentes se usan en un texto**
+
+## Ejemplo de juguete
+
+```{r, echo=TRUE}
+library(quanteda.textstats)
+library(quanteda)
+texto1 <-  c("juego juego juego juego")
+texto2 <- c("canto canto canto canto")
+texto3 <- c("juego canto juego canto")
+
+ejemplo <- data.frame(text = c(texto1, texto2, texto3))
+
+ejemplo %>% 
+  corpus() %>% 
+  tokens() %>% 
+  dfm() %>% 
+  textstat_lexdiv()
+
+
+
+```
+
+## Aplicación real
+
+::: panel-tabset
+## Texto
+
+```{r, echo=FALSE}
+library("readtext")
+allende <- readtext("data/discurso_allende.txt")  
+```
+
+```{r, echo=FALSE}
+discurso <- allende$text %>% 
+  str_split(pattern = " ")
+paste(discurso[[1]][1:13], collapse = " ")
+
+```
+
+## riqueza 1
+
+```{r, echo=TRUE}
+library("readtext")
+allende <- readtext("data/discurso_allende.txt")  
+
+dfm_mat <- allende %>% 
+  corpus() %>% 
+  tokens() %>% 
+  dfm() 
+  
+diversidad <- textstat_lexdiv(dfm_mat)
+print(diversidad)
+
+```
+
+## riqueza 2
+
+```{r, echo=TRUE}
+dfm_mat <- allende %>% 
+  corpus() %>% 
+  tokens() %>% 
+  tokens_select(stopwords("es"), selection = "remove" ) %>% 
+  dfm() 
+  
+diversidad <- textstat_lexdiv(dfm_mat)
+print(diversidad)
+
+```
+
+**¿Y si lematizamos?**
+
+## ideas
+
+Comparación con otros políticos de la época
+
+Comparación en el tiempo
+
+Comparación entre tendencias políticas
+
+¿Más ideas?
+:::
+
+## Análisis de frecuencia relativa (keyness)
+
+Estamos interesados en comparar textos
+
+. . .
+
+Exploraremos noticias en inglés del Guardian (política, sociedad e internacional. 2012-2016)
+
+```{r, echo=TRUE}
+library(quanteda)
+library(quanteda.textstats)
+library(quanteda.textplots)
+library(lubridate)
+require(quanteda.corpora) ## solo disponible en github
+```
+
+## Descargar y procesar
+
+```{r, echo=TRUE}
+corpus_guardian <- download("data_corpus_guardian")
+tokens <- tokens(corpus_guardian, remove_punct = TRUE) 
+dfm <- dfm(tokens)
+print(dim(dfm)) 
+```
+
+6000 noticia procesadas
+
+. . .
+
+```{r, echo=TRUE}
+tstat_key <- textstat_keyness(dfm, 
+                              target = year(dfm$date) >= 2016)
+textplot_keyness(tstat_key)
+
+```
+
+## Wordfish (Slapin & Proksch, 2008)
+
+Modelo no supervisado para hacer posicionamiento ideológico
+
+. . .
+
+Nos permite posicionar textos en un espacio de una dimensión 
+
+. . .
+
+Se basa únicamente en la frecuencia de las palabras 
+
+. . . 
+
+$y_{ijt}=Poisson(\lambda_{ijt})$
+
+$\lambda_{ijt} = exp(\alpha_{it} + ψ_{j} + β_j ∗ ω_{it})$
+
+$j$: palabra
+
+$i$: partido
+
+$\alpha_{i}$: efecto fijo partido (textos muy largos)
+
+$ψ_j$: efecto fijo palabra (palabras usadas mucho por todos los partidos)
+
+$ω$: Parámetro que indica la posición de un actor/partido
+
+$β$: Poder discriminador de las palabras
+
+## Implementación wordfish
+
+
+
+::: panel-tabset
+
+## Datos
+
+Declaraciones de principios de partidos
+
+Obligación de publicarse por Ley de Transparencia
+
+Tenemos algunos en pdf y otros en txt
+
+
+## Carga 
+
+
+```{r, echo=TRUE}
+library(readtext)
+library(tidyverse)
+
+# Cargar datos
+data <- readtext("data/partidos/*.pdf") # algunos programas están en pdf
+data2 <- readtext("data/partidos/*.txt") # otros están en txt 
+
+data <- data %>% 
+  bind_rows(data2)
+
+```
+
+## edición
+
+```{r, echo=TRUE}
+# Sacar caracteres molestos
+data_edit <- data %>% 
+  mutate(text = str_replace_all(text, pattern = "\\n", " "),
+         text = tolower(text)
+         ) %>% 
+  mutate(doc_id = case_when(
+    doc_id == "Declaración_Principios_PC.pdf" ~ "pc",
+    doc_id == "Declracion-de-Principios-PSCH_2018.pdf" ~ "ps",
+    doc_id == "declaracion_rd.pdf" ~ "rd",
+    doc_id == "cs.txt" ~ "cs",
+    doc_id == "DECLARACION-PRINCIPIOS-PDC.pdf"  ~ "dc",
+    doc_id == "DECLARACIÓN DE PRINCIPIOS RENOVACIÓN NACIONAL.pdf" ~ "rn",
+    doc_id == "evopoli.txt" ~ "evopoli",
+    doc_id == "Declaracion de principios 2017 udi.pdf" ~ "udi",
+    doc_id == "republicanos.txt" ~ "republicanos",
+    doc_id == "radical.txt" ~ "radical"
+  )) %>% 
+  mutate(izquierda = if_else(doc_id %in% c("rd", "pc", "ps", "cs"), 1, 0 )) %>% 
+  filter(izquierda == 1 | doc_id == "dc" | doc_id == "rn")
+
+```
+
+## quanteda
+
+```{r, echo=TRUE}
+
+tokens <- corpus(data_edit) %>% 
+  tokens(remove_punct = TRUE, remove_numbers = T) %>%
+  tokens_select(pattern = stopwords("es"), selection = "remove", min_nchar=3L) 
+
+dfm <- tokens %>% 
+  dfm()
+
+
+```
+
+## wordfish
+
+
+```{r, echo=TRUE}
+library(quanteda.textmodels)
+wf <- textmodel_wordfish( dfm, dir = c(2, 1) ) # 
+
+# Función de quanteda para crear gráfico
+textplot_scale1d(wf)  
+
+
+```
+
+## gráfico propio
+
+El parámetro $\theta$ corresponde a $ω$ en el modelo inicial  
+
+
+```{r, echo=TRUE}
+
+# Construir intervalos de confianza 
+theta <- data.frame(docs = wf$docs, theta = wf$theta, se = wf$se.theta) %>% 
+  mutate(lower = theta -  1.96 * se,
+         upper = theta +  1.96 * se
+         )
+
+theta %>% 
+  mutate(docs = toupper(docs)) %>% 
+  ggplot(aes(x =  reorder(docs, theta), y = theta)) +
+  geom_point() +
+  coord_flip() +
+  geom_segment(aes(x = docs, y = lower , 
+                   xend = docs, yend = upper ,
+                   colour = "segment"))  +
+  labs(title = "Puntajes wordfish a partir de declaración de principios de los partidos") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 13),
+        axis.title.y = element_blank(),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = 18),
+        panel.border = element_blank()
+        ) 
+
+```
+
+
+:::
+
+## Poder descriminador de palabras
+
+```{r, fig.width=7, fig.height=5, fig.align='center',  echo=TRUE}
+
+plot_words <-  textplot_scale1d(wf, margin="features", highlighted = c("comunista", "socialista", "recabarren", "revolucionarios", "empleo", "delictual", "religiosa", "chile"))
+       
+plot_words
+
+```
+
+
+## Topic modeling
+
+LDA: Latent Dirichlet allocation 
+
+. . .
+
+Cada documento es tratado como una mezcla de tópicos
+
+. . .
+
+Cada tópico es una mezcla de palabras
+
+. . .
+
+```{r, echo=TRUE}
+library(topicmodels)
+
+data("AssociatedPress")
+AssociatedPress
+
+```
+
+. . .
+
+```{r, echo=TRUE}
+lda <- LDA(AssociatedPress, k = 2, control = list(seed = 1234))
+lda
+```
+
+## Topic modeling
+
+beta: Probabilidad de que una palabra sea generada por un tópico
+
+```{r, echo=TRUE}
+library(tidytext)
+topics <- tidy(lda, matrix = "beta")
+topics
+```
+
+
+## Topic modeling
+
+```{r, echo=TRUE}
+top_terms <- topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+```
+
+## Topic modeling
+
+```{r, echo=TRUE}
+beta_wide <- topics %>%
+  mutate(topic = paste0("topic", topic)) %>%
+  pivot_wider(names_from = topic, values_from = beta) %>% 
+  filter(topic1 > .001 | topic2 > .001) %>%
+  mutate(log_ratio = log2(topic2 / topic1))
+
+beta_wide %>%
+  mutate(new_log = abs(log_ratio)) %>% 
+  slice_max(new_log, n = 10) %>% 
+  ggplot(aes(x = fct_reorder(term, desc(new_log)) , y = log_ratio)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme(axis.title.y = element_blank())
+
+```
+
+
+## Más recursos
+
+[Libro sobre text mining con R](https://www.tidytextmining.com/topicmodeling)
+
+[Encontrando k óptimo](https://ladal.edu.au/topicmodels.html)
+
+## En resumen
+
+Hemos revisado varias estrategias para trabajar con texto
+
+- Procesamiento básico con stringr
+- Herramientas para POS con udpipe
+- Exploración y procesamiento de textos con quanteda
+- Transformación en vectores (tfidf)
+- Utilización de *embeddings* con Python (combinación con reticulate)
+- Algunas herramientas no supervisadas
+
+
+. . .
+
+**Cuentan con una serie de herramientas para desarrollar su trabajo final**
+
+
+
+# Métodos computacionales para las ciencias sociales {.center background-color="aquamarine"}
